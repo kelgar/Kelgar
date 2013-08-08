@@ -1,0 +1,5 @@
+coal.jpg and coal_n.jpg were created by yughues and licensed as CC0.
+The source photograph for sand01.jpg was taken from burningwell.org and is licensed as CC0. 
+
+
+All other textures, bump maps and gloss maps were created by Rick Hoppmann (kddekadenz).
