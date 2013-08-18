@@ -79,13 +79,12 @@ namespace UI
     };
 
     static vector<delayedupdate> updatelater;
-    template<class T> static void updateval(char *var, T val, uint *onchange)
+    template<class T> static void updateval(ident *id, T val, uint *onchange)
     {
-        ident *id = writeident(var);
         updatelater.add().schedule(id, val);
         updatelater.add().schedule(onchange);
     }
-    ICOMMAND(updateval, "sse", (char *var, char *value, uint *onchange),
+    ICOMMAND(updateval, "rse", (ident *var, char *value, uint *onchange),
     {
         updateval(var, value, onchange);
     });
@@ -105,34 +104,6 @@ namespace UI
         }
     }
 #endif
-
-    static float getfval(char *var)
-    {
-        ident *id = readident(var);
-        if(!id) return 0;
-        switch(id->type)
-        {
-            case ID_VAR: return *id->storage.i;
-            case ID_FVAR: return *id->storage.f;
-            case ID_SVAR: return parsefloat(*id->storage.s);
-            case ID_ALIAS: return id->getfloat();
-            default: return 0;
-        }
-    }
-
-    static const char *getsval(char *var)
-    {
-        ident *id = readident(var);
-        if(!id) return "";
-        switch(id->type)
-        {
-            case ID_VAR: return intstr(*id->storage.i);
-            case ID_FVAR: return floatstr(*id->storage.f);
-            case ID_SVAR: return *id->storage.s;
-            case ID_ALIAS: return id->getstr();
-            default: return "";
-        }
-    }
 
     struct Object;
 
@@ -519,6 +490,7 @@ namespace UI
         {
             loopinchildrenrev(o, cx, cy,
             {
+                if(!o->takesinput()) continue;
                 Object *c = o->hover(ox, oy);
                 if(c == o) { hoverx = ox; hovery = oy; }
                 return c;
@@ -530,7 +502,9 @@ namespace UI
         {
             loopinchildrenrev(o, cx, cy,
             {
+                if(!o->takesinput()) continue;
                 Object *c = o->select(ox, oy);
+                if(c && i < children.length() - 1) { children.removeobj(o); children.add(o); }
                 if(c == o) { selectx = ox; selecty = oy; }
                 return c;
             });
@@ -830,7 +804,7 @@ namespace UI
         ~Conditional() { freecode(cond); }
 
         int forks() const { return 2; }
-        int choosefork() const { return execute(cond) ? 0 : 1; }
+        int choosefork() const { return executebool(cond) ? 0 : 1; }
     };
 
     struct Button : Object
@@ -1235,9 +1209,21 @@ namespace UI
         }
     };
 
+    static float getfval(ident *id)
+    {
+        switch(id->type)
+        {
+            case ID_VAR: return *id->storage.i;
+            case ID_FVAR: return *id->storage.f;
+            case ID_SVAR: return parsefloat(*id->storage.s);
+            case ID_ALIAS: return id->getfloat();
+            default: return 0;
+        }
+    }
+
     struct Slider : Object
     {
-        char *var;
+        ident *id;
         float vmin, vmax;
         uint *onchange;
         float arrowsize;
@@ -1247,34 +1233,30 @@ namespace UI
         int laststep;
         int arrowdir;
 
-        Slider(char *varname, float min = 0, float max = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) :
-        var(newstring(varname)), vmin(min), vmax(max), onchange(onchange), arrowsize(arrowsize), stepsize(stepsize), steptime(steptime), laststep(0), arrowdir(0)
+        Slider(ident *id, float min = 0, float max = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) :
+        id(id), vmin(min), vmax(max), onchange(onchange), arrowsize(arrowsize), stepsize(stepsize), steptime(steptime), laststep(0), arrowdir(0)
         {
             keepcode(onchange);
-            ident *id = readident(varname);
-            if(id && vmin == 0 && vmax == 0)
+            if(vmin == 0 && vmax == 0) switch(id->type)
             {
-                if(id->type == ID_VAR)
-                {
-                    vmin = id->minval;
-                    vmax = id->maxval;
-                }
-                else if(id->type == ID_FVAR)
-                {
-                    vmin = id->minvalf;
-                    vmax = id->maxvalf;
-                }
+                case ID_VAR:
+                    vmin = id->minval; vmax = id->maxval;
+                    break;
+                case ID_FVAR:
+                    vmin = id->minvalf; vmax = id->maxvalf;
+                    break;
+
             }
         }
-        ~Slider() { freecode(onchange); delete[] var; }
+        ~Slider() { freecode(onchange); }
 
         void dostep(int n)
         {
             int maxstep = fabs(vmax - vmin) / stepsize;
-            int curstep = (getfval(var) - min(vmin, vmax)) / stepsize;
+            int curstep = (getfval(id) - min(vmin, vmax)) / stepsize;
             int newstep = clamp(curstep + n, 0, maxstep);
 
-            updateval(var, min(vmax, vmin) + newstep * stepsize, onchange);
+            updateval(id, min(vmax, vmin) + newstep * stepsize, onchange);
         }
 
         void setstep(int n)
@@ -1282,7 +1264,7 @@ namespace UI
             int steps = fabs(vmax - vmin) / stepsize;
             int newstep = clamp(n, 0, steps);
 
-            updateval(var, min(vmax, vmin) + newstep * stepsize, onchange);
+            updateval(id, min(vmax, vmin) + newstep * stepsize, onchange);
         }
 
         bool hoverkey(int code, bool isdown)
@@ -1434,7 +1416,7 @@ namespace UI
 
     struct HorizontalSlider : Slider
     {
-        HorizontalSlider(char *varname, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(varname, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
+        HorizontalSlider(ident *id, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(id, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
 
         int choosedir(float cx, float cy) const
         {
@@ -1462,7 +1444,7 @@ namespace UI
             if(!button) return;
 
             int steps = fabs(vmax - vmin) / stepsize;
-            int curstep = (getfval(var) - min(vmax, vmin)) / stepsize;
+            int curstep = (getfval(id) - min(vmax, vmin)) / stepsize;
             float width = max(w - 2  *arrowsize, 0.0f);
 
             button->w = max(button->w, width / steps);
@@ -1480,7 +1462,7 @@ namespace UI
 
     struct VerticalSlider : Slider
     {
-        VerticalSlider(char *varname, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(varname, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
+        VerticalSlider(ident *id, float vmin = 0, float vmax = 0, uint *onchange = NULL, float arrowsize = 0, float stepsize = 1, int steptime = 1000) : Slider(id, vmin, vmax, onchange, arrowsize, stepsize, steptime) {}
 
         int choosedir(float cx, float cy) const
         {
@@ -1507,7 +1489,7 @@ namespace UI
             if(!button) return;
 
             int steps = (max(vmax, vmin) - min(vmax, vmin)) / stepsize + 1;
-            int curstep = (getfval(var) - min(vmax, vmin)) / stepsize;
+            int curstep = (getfval(id) - min(vmax, vmin)) / stepsize;
             float height = max(h - 2  *arrowsize, 0.0f);
 
             button->h = max(button->h, height / steps);
@@ -2160,8 +2142,44 @@ namespace UI
         }
     };
 
+    struct Font : Object
+    {
+        const char *font;
+
+        Font(const char *f) : font(newstring(f)) {}
+        ~Font() { delete[] font; }
+
+        void layout()
+        {
+            pushfont();
+            setfont(font);
+
+            Object::layout();
+
+            popfont();
+        }
+
+        void draw(float sx, float sy)
+        {
+            pushfont();
+            setfont(font);
+
+            Object::draw(sx, sy);
+
+            popfont();
+        }
+    };
+
     // default size of text in terms of rows per screenful
     VARP(uitextrows, 1, 40, 200);
+    FVAR(uitextscale, 1, 1.f / uitextrows, 0);
+    FVAR(uicontextscale, 1, 0, 0);
+
+    enum textstyle
+    {
+        UI = 0,
+        CONSOLE
+    };
 
     struct Text : Object
     {
@@ -2169,9 +2187,10 @@ namespace UI
         float scale;
         float wrap;
         Color color;
+        textstyle style;
 
-        Text(const char *str, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255))
-            : str(newstring(str)), scale(scale), wrap(wrap), color(color) {}
+        Text(const char *str, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255), textstyle style = UI)
+            : str(newstring(str)), scale(scale), wrap(wrap), color(color), style(style) {}
         ~Text() { delete[] str; }
 
         Object *target(float cx, float cy)
@@ -2180,7 +2199,7 @@ namespace UI
             return o ? o : this;
         }
 
-        float drawscale() const { return scale / (FONTH * uitextrows); }
+        float drawscale() const { return scale / FONTH * (style == CONSOLE ? uicontextscale : uitextscale); }
 
         void draw(float sx, float sy)
         {
@@ -2218,9 +2237,12 @@ namespace UI
         float scale;
         float wrap;
         Color color;
+        textstyle style;
 
-        EvalText(uint *cmd, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255)) : cmd(cmd), scale(scale), wrap(wrap), color(color) { keepcode(cmd); }
-        ~EvalText() { freecode(cmd); }
+        tagval result;
+
+        EvalText(uint *cmd, float scale = 1, float wrap = -1, const Color &color = Color(255, 255, 255), textstyle style = UI) : cmd(cmd), scale(scale), wrap(wrap), color(color), style(style) { keepcode(cmd); }
+        ~EvalText() { freecode(cmd); result.cleanup(); }
 
         Object *target(float cx, float cy)
         {
@@ -2228,13 +2250,10 @@ namespace UI
             return o ? o : this;
         }
 
-        float drawscale() const { return scale / (FONTH * uitextrows); }
+        float drawscale() const { return scale / FONTH * (style == CONSOLE ? uicontextscale : uitextscale); }
 
         void draw(float sx, float sy)
         {
-            tagval result;
-            executeret(cmd, result);
-
             float k = drawscale();
             pushhudmatrix();
             hudmatrix.scale(k, k, 1);
@@ -2246,25 +2265,39 @@ namespace UI
             gle::colorf(1, 1, 1);
 
             Object::draw(sx, sy);
-            result.cleanup();
         }
 
         void layout()
         {
-            tagval result;
             executeret(cmd, result);
             Object::layout();
 
             int tw, th;
             float k = drawscale();
             text_bounds(result.getstr(), tw, th, wrap <= 0 ? -1 : wrap/k);
-            if(wrap <= 0)
-                w = max(w, tw*k);
-            else
-                w = max(w, min(wrap, tw*k));
+            if(wrap <= 0) w = max(w, tw*k);
+            else w = max(w, min(wrap, tw*k));
             h = max(h, th*k);
+        }
+    };
 
-            result.cleanup();
+    struct Console : Filler
+    {
+        Console(float minw = 0, float minh = 0) : Filler(minw, minh) {}
+
+        float drawscale() const { return uicontextscale / FONTH; }
+
+        void draw(float sx, float sy)
+        {
+            Object::draw(sx, sy);
+
+            float k = drawscale();
+            pushhudmatrix();
+            hudmatrix.translate(sx, sy, 0);
+            hudmatrix.scale(k, k, 1);
+            flushhudmatrix();
+            renderfullconsole(w/k, h/k);
+            pophudmatrix();
         }
     };
 
@@ -2291,6 +2324,8 @@ namespace UI
             refreshrepeat++;
         }
 
+        float drawscale() const { return scale / FONTH * uitextscale; }
+
         Object *target(float cx, float cy)
         {
             Object *o = Object::target(cx, cy);
@@ -2313,8 +2348,9 @@ namespace UI
         {
             if(isselected(this) && isfocused(this))
             {
-                bool dragged = max(fabs(cx - offsetx), fabs(cy - offsety)) > (FONTH/8.0f)*scale/float(FONTH*uitextrows);
-                edit->hit(int(floor(cx*(FONTH*uitextrows)/scale - FONTW/2)), int(floor(cy*(FONTH*uitextrows)/scale)), dragged);
+                float k = drawscale();
+                bool dragged = max(fabs(cx - offsetx), fabs(cy - offsety)) > (FONTH/8.0f)*k;
+                edit->hit(int(floor(cx/k - FONTW/2)), int(floor(cy/k)), dragged);
             }
         }
 
@@ -2391,15 +2427,15 @@ namespace UI
                 text_bounds(edit->lines[0].text, temp, edit->pixelheight, edit->pixelwidth); //only single line editors can have variable height
             }
 
-            w = max(w, (edit->pixelwidth + FONTW)*scale/float(FONTH*uitextrows));
-            h = max(h, edit->pixelheight*scale/float(FONTH*uitextrows));
+            w = max(w, (edit->pixelwidth + FONTW) * drawscale());
+            h = max(h, edit->pixelheight * drawscale());
         }
 
         void draw(float sx, float sy)
         {
             pushhudmatrix();
             hudmatrix.translate(sx, sy, 0);
-            hudmatrix.scale(scale/(FONTH*uitextrows), scale/(FONTH*uitextrows), 1);
+            hudmatrix.scale(drawscale(), drawscale(), 1);
             flushhudmatrix();
 
             edit->draw(FONTW/2, 0, 0xFFFFFF, isfocused(this));
@@ -2412,17 +2448,29 @@ namespace UI
         const int gettype() const { return TYPE_TEXTEDITOR; }
     };
 
+    static const char *getsval(ident *id, const char *val = "")
+    {
+        switch(id->type)
+        {
+            case ID_VAR: val = intstr(*id->storage.i); break;
+            case ID_FVAR: val = floatstr(*id->storage.f); break;
+            case ID_SVAR: val = *id->storage.s; break;
+            case ID_ALIAS: val = id->getstr(); break;
+        }
+        return val;
+    }
+
     struct Field : TextEditor
     {
-        char *var;
+        ident *id;
         uint *onchange;
 
-        Field(const char *var, int length, uint *onchange, float scale = 1, const char *keyfilter = NULL) : TextEditor(var, length, 0, scale, NULL, EDITORFOCUSED, keyfilter), var(newstring(var)), onchange(onchange) { keepcode(onchange); }
-        ~Field() { delete[] var; freecode(onchange); }
+        Field(ident *id, int length, uint *onchange, float scale = 1, const char *keyfilter = NULL) : TextEditor(id->name, length, 0, scale, NULL, EDITORFOCUSED, keyfilter), id(id), onchange(onchange) { keepcode(onchange); }
+        ~Field() { freecode(onchange); }
 
         void commit()
         {
-            updateval(var, edit->lines[0].text, onchange);
+            updateval(id, edit->lines[0].text, onchange);
         }
 
         bool hoverkey(int code, bool isdown)
@@ -2432,7 +2480,7 @@ namespace UI
 
         void resetvalue()
         {
-            const char *str = getsval(var);
+            const char *str = getsval(id);
             if(strcmp(edit->lines[0].text, str)) edit->clear(str);
         }
 
@@ -2584,7 +2632,7 @@ namespace UI
         return n;
     }
 
-    void clearuis()
+    void hideallui()
     {
         loopv(world->children)
         {
@@ -2597,9 +2645,40 @@ namespace UI
         }
     }
 
-    bool activeui(const char *name)
+    bool uivisible(const char *name)
     {
         return world->findname(TYPE_WINDOW, name, false);
+    }
+
+    bool toggleui(const char *name)
+    {
+        Window *w = (Window *) world->findname(TYPE_WINDOW, name, false);
+        if(w)
+        {
+            w->hidden();
+            world->remove(w);
+            return false;
+        }
+        defformatstring(cmd, "show%s", name);
+        execident(cmd);
+        return true;
+    }
+
+    void holdui(const char *name, bool on)
+    {
+        Window *w = (Window *) world->findname(TYPE_WINDOW, name, false);
+        if(on)
+        {
+            if(w) return;
+            defformatstring(cmd, "show%s", name);
+            execident(cmd);
+        }
+        else if(w)
+        {
+            w->hidden();
+            world->remove(w);
+        }
+
     }
 
     void addui(Object *o, uint *children)
@@ -2619,6 +2698,11 @@ namespace UI
         o->layout();
         if(!build.length()) world->layout();
     }
+
+    COMMAND(hideallui, "");
+    ICOMMAND(uivisible, "s", (const char *name), intret(uivisible(name)));
+    ICOMMAND(holdui, "sD", (const char *name, int *down), holdui(name, *down != 0));
+    ICOMMAND(toggleui, "s", (const char *name), intret(toggleui(name)));
 
     static inline float parsepixeloffset(const tagval *t, int size)
     {
@@ -2684,10 +2768,10 @@ namespace UI
     ICOMMAND(uiscrollbutton, "e", (uint *children),
         addui(new ScrollButton, children));
 
-    ICOMMAND(uihslider, "sffeffie", (char *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
+    ICOMMAND(uihslider, "rffeffie", (ident *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
         addui(new HorizontalSlider(var, *vmin, *vmax, onchange, *arrowsize, *stepsize ? *stepsize : 1, *steptime), children));
 
-    ICOMMAND(uivslider, "sffeffie", (char *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
+    ICOMMAND(uivslider, "rffeffie", (ident *var, float *vmin, float *vmax, uint *onchange, float *arrowsize, float *stepsize, int *steptime, uint *children),
         addui(new VerticalSlider(var, *vmin, *vmax, onchange, *arrowsize, *stepsize ? *stepsize : 1, *steptime), children));
 
     ICOMMAND(uisliderbutton, "e", (uint *children),
@@ -2765,6 +2849,9 @@ namespace UI
         addui(new ModelPreview(*minw, *minh, model, *anim, attach), children);
     )
 
+    ICOMMAND(uifont, "se", (const char *f, uint *children),
+             addui(new Font(f), children));
+
     ICOMMAND(uicolortext, "sffie", (char *text, float *scale, float *wrap, int *c, uint *children),
         addui(new Text(text, *scale <= 0 ? 1 : *scale, *wrap, Color(*c)), children));
 
@@ -2777,11 +2864,22 @@ namespace UI
     ICOMMAND(uievaltext, "effe", (uint *cmd, float *scale, float *wrap, uint *children),
         addui(new EvalText(cmd, *scale <= 0 ? 1 : *scale, *wrap), children));
 
-    ICOMMAND(uitexteditor, "siifsise", (char *name, int *length, int *height, float *scale, char *initval, int *keep, char *filter, uint *children),
-        addui(new TextEditor(name, *length, *height, *scale, initval, *keep ? EDITORFOREVER : EDITORUSED, filter[0] ? filter : NULL), children));
+    ICOMMAND(uicontext, "sfe", (char *text, float *wrap, uint *children),
+        Text *o = new Text(text, 1, *wrap); o->style = CONSOLE;
+        addui(o, children));
 
-    ICOMMAND(uifield, "siefse", (char *var, int *length, uint *onchange, float *scale, char *filter, uint *children),
-        addui(new Field(var, *length, onchange, *scale, filter[0] ? filter : NULL), children));
+    ICOMMAND(uievalcontext, "efe", (uint *cmd, float *wrap, uint *children),
+        EvalText *o = new EvalText(cmd, 1, *wrap); o->style = CONSOLE;
+        addui(o, children));
+
+    ICOMMAND(uitexteditor, "siifsise", (char *name, int *length, int *height, float *scale, char *initval, int *keep, char *filter, uint *children),
+        addui(new TextEditor(name, *length, *height, *scale <= 0 ? 1 : *scale, initval, *keep ? EDITORFOREVER : EDITORUSED, filter[0] ? filter : NULL), children));
+
+    ICOMMAND(uifield, "riefse", (ident *var, int *length, uint *onchange, float *scale, char *filter, uint *children),
+        addui(new Field(var, *length, onchange, *scale <= 0 ? 1 : *scale, filter[0] ? filter : NULL), children));
+
+    ICOMMAND(uiconsole, "ffe", (float *minw, float *minh, uint *children),
+        addui(new Console(*minw, *minh), children));
 
     ICOMMAND(uivgradient, "iiffe", (int *c, int *c2, float *minw, float *minh, uint *children),
         addui(new Gradient(Gradient::SOLID, Gradient::VERTICAL, Color(*c), Color(*c2), *minw, *minh), children));
@@ -2824,7 +2922,7 @@ namespace UI
         {
             cursorx = clamp( cursorx + dx * cursorsensitivity / screenw, 0.f, 1.f);
             cursory = clamp( cursory + dy * cursorsensitivity / screenh, 0.f, 1.f);
-            if(cursormode() == 2)
+            if(editmode || cursormode() == 2)
             {
                 if(cursorx != 1 && cursorx != 0) dx = 0;
                 if(cursory != 1 && cursory != 0) dy = 0;
@@ -2859,7 +2957,7 @@ namespace UI
 
     bool keypress(int code, bool isdown)
     {
-        if(!hascursor()) return false;
+        if(!cursormode()) return false;
         switch(code)
         {
             case -5:
@@ -2876,6 +2974,8 @@ namespace UI
             }
             case -1:
             {
+                if(!hascursor()) return false;
+
                 if(isdown)
                 {
                     selected = world->select(cursorx*world->w, cursory*world->h);
@@ -2895,7 +2995,7 @@ namespace UI
     {
         if(mainmenu && (isconnected() || haslocalclients()))
         {
-            clearuis();
+            hideallui();
             mainmenu = 0;
         }
     }
@@ -2912,7 +3012,7 @@ namespace UI
     void renderbackground()
     {
         world = bgworld;
-        execute("showbackground");
+        execident("showbackground");
 
         Object *lasttooltip = tooltip;
         tooltip = NULL;
@@ -2929,7 +3029,7 @@ namespace UI
     void renderprogress()
     {
         world = ldworld;
-        execute("showloading");
+        execident("showloading");
 
         Object *lasttooltip = tooltip;
         tooltip = NULL;
@@ -2945,6 +3045,16 @@ namespace UI
 
     int showchanges = 0;
 
+    void calctextscale()
+    {
+        uitextscale = 1.0f/uitextrows;
+
+        int tw = hudw, th = hudh;
+        if(forceaspect) tw = int(ceil(th*forceaspect));
+        gettextres(tw, th);
+        uicontextscale = (FONTH*conscale)/th;
+    }
+
     void update()
     {
         loopv(updatelater)
@@ -2959,6 +3069,7 @@ namespace UI
 
         readyeditors();
         tooltip = NULL;
+        calctextscale();
         //world->layout();
 
         if(hascursor())
@@ -3089,33 +3200,3 @@ ICOMMAND(loopchanges, "se", (char *var, uint *body),
 {
     loopv(needsapply) { alias(var, needsapply[i].desc); execute(body); }
 });
-
-HVARP(fullconcolor, 0, 0x4F4F4F, 0xFFFFFF);
-FVARP(fullconblend, 0, .8, 1);
-
-void consolebox(float x1, float y1, float x2, float y2)
-{
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    pushhudmatrix();
-    hudmatrix.translate(x1, y1, 0);
-    flushhudmatrix();
-
-    hudnotextureshader->set();
-
-    float r = ((fullconcolor >> 16) & 0xFF) / 255.f,
-        g = ((fullconcolor >> 8) & 0xFF) / 255.f,
-        b = (fullconcolor & 0xFF) / 255.f;
-    gle::colorf(r, g, b, fullconblend);
-    gle::defvertex(2);
-
-    gle::begin(GL_TRIANGLE_STRIP);
-    gle::attribf(x1, y1);
-    gle::attribf(x2, y1);
-    gle::attribf(x1, y2);
-    gle::attribf(x2, y2);
-    gle::end();
-
-    pophudmatrix();
-    hudshader->set();
-}
