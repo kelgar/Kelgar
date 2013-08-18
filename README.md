@@ -1,5 +1,3 @@
-# About
-
 > Kelgar is a beautiful world, but beneath that beauty lies darker secrets. A haunted mine, a paranoid king, an evil necromancer, a painter hiding away in a world she created for herself... you'll find all this and more in Kelgar, created with top-of-the-line indie tech! 
 
 Kelgar is an open-world RPG, being first released in January 2013.
