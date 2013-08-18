@@ -1,0 +1,153 @@
+<!doctype html>
+<!-- The Time Machine GitHub pages theme was designed and developed by Jon Rohan, on Feb 7, 2012. -->
+<!-- Follow him for fun. http://twitter.com/jonrohan. Tail his code on http://github.com/jonrohan -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="stylesheet" href="stylesheets/stylesheet.css" media="screen"/>
+  <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="javascripts/script.js"></script>
+
+  <title>Kelgar-beta</title>
+  <meta name="description" content="Open-World, First Person, Cross-Platform, Open-Source RPG">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <header>
+      <h1 class="title">Kelgar-beta</h1>
+    </header>
+    <div id="container">
+      <p class="tagline">Open-World, First Person, Cross-Platform, Open-Source RPG</p>
+      <div id="main" role="main">
+        <div class="download-bar">
+        <div class="inner">
+          <a href="https://github.com/kelgar/Kelgar-Beta/tarball/master" class="download-button tar"><span>Download</span></a>
+          <a href="https://github.com/kelgar/Kelgar-Beta/zipball/master" class="download-button zip"><span>Download</span></a>
+          <a href="https://github.com/kelgar/Kelgar-Beta" class="code">View Kelgar-beta on GitHub</a>
+        </div>
+        <span class="blc"></span><span class="trc"></span>
+        </div>
+        <article class="markdown-body">
+          <h1>
+<a name="about" class="anchor" href="#about"><span class="octicon octicon-link"></span></a>About</h1>
+
+<blockquote>
+<p>Kelgar is a beautiful world, but beneath that beauty lies darker secrets. A haunted mine, a paranoid king, an evil necromancer, a painter hiding away in a world she created for herself... you'll find all this and more in Kelgar, created with top-of-the-line indie tech! </p>
+</blockquote>
+
+<p>Kelgar is an open-world RPG, being first released in January 2013.
+It is being developed by a group of passionate persons:</p>
+
+<ul>
+<li>
+<strong>Rick (kddekadenz)</strong> - Lead Developer</li>
+<li>
+<strong>Torben</strong> - Lead Environmental Artist</li>
+<li>
+<strong>Michiel (51nt3rkl445)</strong> - Environmental Artist</li>
+<li>
+<strong>Paul (greenlight)</strong> - Environmental Artist</li>
+<li>
+<strong>Ryan (flawlesstdouble)</strong> - Static 3D Models Creator</li>
+<li>
+<strong>Cestmir (CDmir)</strong> - Animated 3D Models Creator</li>
+<li>
+<strong>Winter (Filasis Nome)</strong> - Lead Concept Artist</li>
+<li>
+<strong>Alan (AlanPereira)</strong> - Concept Artist &amp; Scripter</li>
+<li>
+<strong>Miamelly</strong> - Illustrator &amp; Concept Artist</li>
+<li>
+<strong>Thomas (cptmashek)</strong> - Quest Designer</li>
+<li>
+<strong>Corey (R-Y-S-E)</strong> - Music Composer</li>
+</ul><h2>
+<a name="engine" class="anchor" href="#engine"><span class="octicon octicon-link"></span></a>Engine</h2>
+
+<p>We're using <a href="https://github.com/Hirato/lamiae">Lamiae</a> as engine, which is a fantastic octree-based first person engine being developed by Kevin 'Hirato' Meyer. It is originally based on Cube 2, thus running smooth and stable. The framework is highly flexible. Having merged the Cube 2 fork Tesseract, it also features a state of the art lighting model and other advanced rendering features, including SSAO, HDR w/ tonemapping, Radiance Hints (Global Illumination) and more.</p>
+
+<h2>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>The source code of Lamiae and Kelgar is accessible under the terms of the permissive zLib License.
+See LICENSE.txt for more pieces of information!
+The art of Kelgar currently is excluded out of the license.</p>
+
+<h2>
+<a name="run-instructions" class="anchor" href="#run-instructions"><span class="octicon octicon-link"></span></a>Run Instructions</h2>
+
+<p>If you need to build a binary first, see the section below.</p>
+
+<h3>
+<a name="windows" class="anchor" href="#windows"><span class="octicon octicon-link"></span></a>Windows</h3>
+
+<p>There is a lamiae.bat in the main directory, this is your sole means of launching lamiae.
+If you're having issues running the game, make sure that your drivers are properly installed and that your GPU can at least match Intel's Sandy Bridge in all aspects.</p>
+
+<h3>
+<a name="linuxfreebsd" class="anchor" href="#linuxfreebsd"><span class="octicon octicon-link"></span></a>Linux/FreeBSD</h3>
+
+<p>There is a script named lamiae.sh in the main directory, running this will launch the proper binary for your platform.
+A multitude of command line options are available, run with --help, -h or -? to get a list.
+If you have problems running it, make sure that SDL2, SDL2_mixer and SDL2_image is installed. If you have an Nvidia GPU, you should also make sure that the proprietary drivers are installed and working.</p>
+
+<h2>
+<a name="build-instructions" class="anchor" href="#build-instructions"><span class="octicon octicon-link"></span></a>Build Instructions</h2>
+
+<h3>
+<a name="windows-1" class="anchor" href="#windows-1"><span class="octicon octicon-link"></span></a>Windows</h3>
+
+<ol>
+<li>Install Codeblocks ( <a href="http://www.codeblocks.org/">http://www.codeblocks.org/</a> ) pick the no-mingw version</li>
+<li>Install mingw64 with SILJ bindings ( <a href="http://tdm-gcc.tdragon.net/download">http://tdm-gcc.tdragon.net/download</a> )</li>
+<li>Open up the codeblocks project file in src/windows/lamiae.cbp</li>
+<li>Click build</li>
+</ol><ul>
+<li>The current 32bit only tdm-gcc release (4.7.1-2) will not compile lamiae, and has other known issues.</li>
+<li>You may need to manually specify the paths for mingw, just point it to C:\MingW64 (or where applicable) and replace the compiler executables with their generic selves (eg mingw32-i386-unknown-gcc.exe to gcc.exe)</li>
+</ul><p>** Support is not provided for Visual Studio, in theory the code should compile with 2005 and later.</p>
+
+<h3>
+<a name="linuxfreebsd-1" class="anchor" href="#linuxfreebsd-1"><span class="octicon octicon-link"></span></a>Linux/FreeBSD</h3>
+
+<ol>
+<li>Install GCC</li>
+<li>Install SDL2, sdl2_mixer and sdl2_image, as well as their *-dev counterparts</li>
+<li>make -C src install</li>
+</ol><ul>
+<li>SDL 2.0 is currently in development, and otherwise known as SDL-hg.
+Most distros don't yet package SDL 2.0, Archlinux has sdl-hg packages in the AUR with which you may use to easily build it yourself, and Ubuntu derivatives can access pre-built apckages via PPAs. You'll need to do it manually otherwise.</li>
+<li>if you want a debug binary instead, use "make -C src -f Makefile.debug install"</li>
+<li>If you're using BSD, you may need to specify the GNU version of the make utility.</li>
+</ul>
+        </article>
+      </div>
+    </div>
+    <footer>
+      <div class="owner">
+      <p><a href="https://github.com/kelgar" class="avatar"><img src="https://identicons.github.com/4b590d5e685a8d32ca73fc05ed97ee8b.png" width="48" height="48"/></a> <a href="https://github.com/kelgar">kelgar</a> maintains <a href="https://github.com/kelgar/Kelgar-Beta">Kelgar-beta</a></p>
+
+
+      </div>
+      <div class="creds">
+        <small>This page generated using <a href="https://pages.github.com/">GitHub Pages</a><br/>theme by <a href="https://twitter.com/jonrohan/">Jon Rohan</a></small>
+      </div>
+    </footer>
+  </div>
+  <div class="current-section">
+    <a href="#top">Scroll to top</a>
+    <a href="https://github.com/kelgar/Kelgar-Beta/tarball/master" class="tar">tar</a><a href="https://github.com/kelgar/Kelgar-Beta/zipball/master" class="zip">zip</a><a href="" class="code">source code</a>
+    <p class="name"></p>
+  </div>
+
+  
+</body>
+</html>
