@@ -7,7 +7,7 @@ It is being developed by a group of passionate persons:
 * **Torben** - Lead Environmental Artist
 * **Michiel (51nt3rkl445)** - Environmental Artist
 * **Paul (greenlight)** - Environmental Artist
-* **Ryan (flawlesstdouble)** - Static 3D Models Creator
+* **Ryan (flawlesstrouble)** - Static 3D Models Creator
 * **Cestmir (CDmir)** - Animated 3D Models Creator
 * **Winter (Filasis Nome)** - Lead Concept Artist
 * **Alan (AlanPereira)** - Concept Artist & Scripter
